@@ -1,0 +1,11 @@
+Package: mongobits
+Type: Package
+Title: Helpers for mongodb access at AAI
+Version: 0.1.0
+Author: Geoffrey Poole
+Maintainer: Geoffrey Poole <gpoole@eco-metrics.com>
+Description: Includes helpers for making sure that a records hasn't been changed based on timestamp prior to modification to support multi-user access.
+License: MIT
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.1
