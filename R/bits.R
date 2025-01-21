@@ -54,14 +54,24 @@ find_with_timestamp <-
 
 #' @rdname find_with_timestamp
 #' @export
-update_one_with_timestamp <- function(document, collection, ts_field = "modified", id_field = "_id") {
+update_one_with_timestamp <-
+  function(document, collection,
+           ts_field = "modified", id_field = "_id") {
 
-  if(!is.list(document)) stop("`document` must be a list")
+  if(!is.list(document)) stop("`document` must be a data.frame or a list")
   if(is.data.frame(document)) {
     if(nrow(document) != 1) stop("`document` must have only one row.")
+    # "unbox" any column that is a list...
+#    document <-
+#      as.list(document) |>
+#      lapply(
+#        \(x) {
+#          if(inherits(x, "list")) return(unlist(x, recursive = FALSE))
+#          x
+#        })
   }
   if(!all(c(id_field, ts_field) %in% names(document)))
-    stop("`document` must have a fields `", id_field, "` and `", ts_field,"`")
+    stop("`document` must have fields `", id_field, "` and `", ts_field,"`")
 
   query <- id_time_query(document, ts_field = ts_field)
 
@@ -78,7 +88,7 @@ update_one_with_timestamp <- function(document, collection, ts_field = "modified
   result <- collection$update(query, update)
 
   if(result$matchedCount == 0)
-    result$message <- "Update failed.  Another user updated the same record."
+    result$message <- "Update failed.  Another user may have updated the same record."
   else
     result$message <- "OK"
 
@@ -94,11 +104,41 @@ update_one_with_timestamp <- function(document, collection, ts_field = "modified
 
 #' @rdname find_with_timestamp
 #' @export
-update_many_with_timestamp <- function(document, collection, ..., simplify = TRUE) {
+update_many_with_timestamp <- function(document, collection, ..., simplify = TRUE, verbose = TRUE) {
   if(!is.data.frame(document)) stop("`document` must be a data.frame")
   sapply(1:nrow(document),
-         \(i) update_one_with_timestamp(document[1,], collection, ...),
-         simplify = simplify)
+         \(i) {
+           if(verbose) cat("\r", i)
+           update_one_with_timestamp(
+             document[i,],
+             collection,
+             ...)
+           },
+           simplify = simplify)
+}
+
+#' Insert a data.frame into mongo with a creation time stamp.
+#'
+#' A wrapper around \code{\link{mongolite::mongo}$insert}.  Mongoserver is
+#' queried for current time and that time is add to the data.frame in two
+#' columns named using the values "ts_field" (modified time/date) and "cr_field"
+#' (created time/date).
+#' @param data A data.frame to add to a mongo collection.
+#' @param collection A mongo colleciton object where the data will be stored.
+#' @param ts_field Name of key for the modified time stamp.
+#' @param cr_field Name of key for the created time stamp.
+#' @returns The result from \code{\link{mongolite::mongo}$insert}.
+insert_with_timestamp <- function(
+    data, collection,
+    ts_field = "modified", cr_field = "created", ...) {
+  if(!is.list(data)) stop("`data` must be a data.frame")
+  data[[cr_field]] <-
+    as.POSIXct(
+      collection$run('{"isMaster": 1}')$localTime,
+      format = "%Y-%m-%dT%H:%M:%OSZ",
+      tz = "UTC")
+  data[[ts_field]] <- data[[cr_field]]
+  collection$insert(data, ...)
 }
 
 

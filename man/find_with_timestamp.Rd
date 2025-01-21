@@ -21,7 +21,13 @@ update_one_with_timestamp(
   id_field = "_id"
 )
 
-update_many_with_timestamp(document, collection, ..., simplify = TRUE)
+update_many_with_timestamp(
+  document,
+  collection,
+  ...,
+  simplify = TRUE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{collection}{A mongo collection object created with
