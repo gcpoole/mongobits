@@ -62,27 +62,27 @@ update_one_with_timestamp <-
   if(is.data.frame(document)) {
     if(nrow(document) != 1) stop("`document` must have only one row.")
     # "unbox" any column that is a list...
-#    document <-
-#      as.list(document) |>
-#      lapply(
-#        \(x) {
-#          if(inherits(x, "list")) return(unlist(x, recursive = FALSE))
-#          x
-#        })
+    document <-
+      as.list(document) |>
+      lapply(
+        \(x) {
+          if(inherits(x, "list")) return(unlist(x, recursive = FALSE))
+          x
+        })
   }
   if(!all(c(id_field, ts_field) %in% names(document)))
     stop("`document` must have fields `", id_field, "` and `", ts_field,"`")
 
   query <- id_time_query(document, ts_field = ts_field)
 
-  update =
+  update <-
     jsonlite::toJSON(
       list(
         # set ts_field to server time
         `$currentDate` =  setNames(list(TRUE), ts_field),
         # get rid of _id and ts_field for other values
         `$set` =
-          as.list(document)[!names(document) %in% c(id_field, ts_field)]),
+          document[!names(document) %in% c(id_field, ts_field)]),
       POSIXt = "mongo", auto_unbox = TRUE)
 
   result <- collection$update(query, update)
